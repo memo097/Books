@@ -1,9 +1,14 @@
 from django.http import HttpResponse
 from django.views.generic import ListView, DetailView
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.forms import ModelForm
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from books.forms import ConnexionForm
+
+
 
 from books.models import Book
 
@@ -63,3 +68,35 @@ def book_delete(request, pk, template_name='books/book_confirm_delete.html'):
         book.delete()
         return redirect('book_list')
     return render(request, template_name, {'object':book})
+
+def connexion(request):
+    error = False
+
+    if request.method == "POST":
+        form = ConnexionForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data["username"]
+            password = form.cleaned_data["password"]
+            user = authenticate(username=username, password=password)  # Nous vérifions si les données sont correctes
+            if user:  # Si l'objet renvoyé n'est pas None
+                login(request, user)  # nous connectons l'utilisateur
+            else: # sinon une erreur sera affichée
+                error = True
+    else:
+        form = ConnexionForm()
+
+    return render(request, 'books/connexion.html', locals())
+
+def deconnexion(request):
+    logout(request)
+    return redirect(reverse(connexion))
+
+def dire_bonjour(request):
+    if request.user.is_authenticated():
+        return HttpResponse("Salut, {0} !".format(request.user.username))
+    return HttpResponse("Salut, anonyme.")
+
+@login_required(login_url='/connexion')
+def ma_vue(request):
+    # do something
+    return redirect (connexion("Connectez vous"))
